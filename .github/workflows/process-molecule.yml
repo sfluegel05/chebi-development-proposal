@@ -1,0 +1,48 @@
+name: Process Molecule
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract SMILES
+        id: extract
+        run: |
+          BODY="${{ github.event.issue.body }}"
+          SMILES=$(echo "$BODY" | awk '/SMILES/{getline; print}')
+          echo "smiles=$SMILES" >> $GITHUB_OUTPUT
+
+      - name: Call API
+        id: api
+        run: |
+          RESPONSE=$(curl -X POST https://example.com/api \
+            -H "Content-Type: application/json" \
+            -d "{\"smiles\": \"${{ steps.extract.outputs.smiles }}\"}")
+
+          echo "$RESPONSE" > result.json
+
+      - name: Format Result
+        id: format
+        run: |
+          RESULT=$(cat result.json | jq -r '.prediction')
+          echo "result=$RESULT" >> $GITHUB_OUTPUT
+
+      - name: Comment Result on Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const result = "${{ steps.format.outputs.result }}"
+            const issue_number = context.issue.number
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: `🧪 **Prediction Result**
+
+Result: ${result}`
+            })

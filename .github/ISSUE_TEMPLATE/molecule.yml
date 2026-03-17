@@ -1,0 +1,20 @@
+name: Molecule Request
+description: Submit a molecule for analysis
+title: "[Molecule]: "
+labels: ["molecule"]
+
+body:
+  - type: input
+    id: smiles
+    attributes:
+      label: SMILES
+      description: Enter the SMILES representation of the molecule
+      placeholder: CCO
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Optional comments
