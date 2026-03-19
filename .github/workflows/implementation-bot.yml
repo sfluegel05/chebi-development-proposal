@@ -1,0 +1,58 @@
+name: Implementation Bot
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  implement:
+    if: contains(github.event.comment.body, '@implementation-bot')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create implemented issue file
+        id: create-file
+        run: |
+          set -e
+          TITLE="${{ github.event.issue.title }}"
+          # Sanitize title: replace spaces with hyphens and remove characters unsafe for filenames
+          SAFE_TITLE=$(echo "$TITLE" | tr ' ' '-' | tr -cd '[:alnum:]._-')
+
+          # Fall back to the issue number if the sanitized title is empty
+          if [ -z "$SAFE_TITLE" ]; then
+            SAFE_TITLE="issue-${{ github.event.issue.number }}"
+          fi
+
+          FILENAME="implemented-issues/${SAFE_TITLE}.txt"
+          mkdir -p implemented-issues
+
+          BODY="${{ github.event.issue.body }}"
+          if [ -z "$BODY" ]; then
+            BODY="(no description provided)"
+          fi
+          printf '%s' "$BODY" > "$FILENAME"
+
+          echo "filename=$FILENAME" >> $GITHUB_OUTPUT
+          echo "safe_title=$SAFE_TITLE" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "implement: add ${{ steps.create-file.outputs.safe_title }}"
+          branch: "implementation/${{ steps.create-file.outputs.safe_title }}"
+          title: "Implement: ${{ github.event.issue.title }}"
+          body: |
+            Closes #${{ github.event.issue.number }}
+
+            This PR implements the issue **${{ github.event.issue.title }}** by adding its content to `${{ steps.create-file.outputs.filename }}`.
+
+            Triggered by @${{ github.event.comment.user.login }} via `@implementation-bot`.
+          add-paths: implemented-issues/
