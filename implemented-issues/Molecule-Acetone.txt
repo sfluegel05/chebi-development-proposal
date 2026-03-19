@@ -1,0 +1,7 @@
+### SMILES
+
+CC(=O)C
+
+### Notes
+
+Please add acetone
