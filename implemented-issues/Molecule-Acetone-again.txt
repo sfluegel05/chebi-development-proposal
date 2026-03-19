@@ -1,0 +1,7 @@
+### SMILES
+
+CC(=O)C
+
+### Notes
+
+_No response_
