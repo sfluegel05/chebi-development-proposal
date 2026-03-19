@@ -8,6 +8,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: read
+  actions: write
 
 jobs:
   implement:
@@ -44,6 +45,7 @@ jobs:
           echo "safe_title=$SAFE_TITLE" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
+        id: create-pr
         uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "implement: add ${{ steps.create-file.outputs.safe_title }}"
@@ -56,3 +58,15 @@ jobs:
 
             Triggered by @${{ github.event.comment.user.login }} via `@implementation-bot`.
           add-paths: implemented-issues/
+
+      - name: Trigger CI on new PR
+        if: steps.create-pr.outputs.pull-request-operation == 'created'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'check-disjointness.yml',
+              ref: 'implementation/${{ steps.create-file.outputs.safe_title }}',
+            });
