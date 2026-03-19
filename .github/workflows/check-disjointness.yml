@@ -3,6 +3,7 @@ name: Check consistency with disjointness axioms
 on:
   pull_request:
   pull_request_target:
+  workflow_dispatch:
 
 permissions: {}
 
