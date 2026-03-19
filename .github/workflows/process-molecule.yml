@@ -31,21 +31,18 @@ jobs:
         run: |
           set -e
           SMILES="${{ steps.extract.outputs.smiles }}"
-          PAYLOAD=$(jq -n --arg s "$SMILES" \
+
+          MODELINFO=$(curl -sf https://chebifier.hastingslab.org/api/modelinfo)
+          if ! echo "$MODELINFO" | jq -e '.available_models | arrays' > /dev/null 2>&1; then
+            echo "Failed to retrieve available models from modelinfo API."
+            exit 1
+          fi
+          SELECTED_MODELS=$(echo "$MODELINFO" | jq '[.available_models[] | {key: ., value: true}] | from_entries')
+
+          PAYLOAD=$(jq -n --arg s "$SMILES" --argjson m "$SELECTED_MODELS" \
             '{
               "smiles": [$s],
-              "selectedModels": {
-                "ELECTRA (ChEBI50-3STAR)": true,
-                "ResGated (ChEBI100-3STAR)": true,
-                "GAT (ChEBI100-3STAR)": true,
-                "GAT-aug (ChEBI100)": true,
-                "GAT-aug (ChEBI50-3STAR)": true,
-                "ResGated-aug (ChEBI50)": true,
-                "C3P": true,
-                "ChemLog": true,
-                "ChEBI Lookup": true,
-                "Lopster": true
-              }
+              "selectedModels": $m
             }')
 
           RESPONSE=$(curl -s -X POST https://chebifier.hastingslab.org/api/classify \
